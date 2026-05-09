@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}CSP Analyzer{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#f4f6f8',
+            card: '#ffffff',
+            border: '#e0e4e8',
+            accent: '#0047bb',
+            'accent-dim': '#003388',
+            muted: '#6b7280',
+            success: '#059669',
+            warning: '#ea580c',
+            danger: '#dc2626',
+            header: '#002b66',
+          },
+          fontFamily: {
+            sans: ['DM Sans', 'sans-serif'],
+            mono: ['DM Mono', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body {
+      background-color: #f4f6f8;
+      color: #111827;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .num {
+      font-family: 'DM Mono', monospace;
+    }
+
+    .score-green {
+      background-color: rgba(5, 150, 105, 0.1);
+      color: #059669;
+    }
+
+    .score-yellow {
+      background-color: rgba(234, 88, 12, 0.1);
+      color: #ea580c;
+    }
+
+    .score-red {
+      background-color: rgba(220, 38, 38, 0.1);
+      color: #dc2626;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.625rem 1rem;
+      border-radius: 0.5rem;
+      color: #d1d5db;
+      transition: all 0.15s;
+      font-size: 0.9rem;
+    }
+
+    .sidebar-link:hover,
+    .sidebar-link.active {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+    }
+
+    .sidebar-link svg {
+      width: 1.1rem;
+      height: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    th {
+      cursor: pointer;
+      user-select: none;
+      color: #4b5563;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+    }
+
+    th:hover {
+      color: #0047bb;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #e0e4e8;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    input,
+    select,
+    textarea {
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      color: #111827;
+      border-radius: 0.375rem;
+      padding: 0.5rem 0.75rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #0047bb;
+      box-shadow: 0 0 0 2px rgba(0, 71, 187, 0.15);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.5rem 1.125rem;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+    }
+
+    .btn-accent {
+      background: #0047bb;
+      color: #ffffff;
+    }
+
+    .btn-accent:hover {
+      background: #003388;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #d1d5db;
+      color: #4b5563;
+    }
+
+    .btn-outline:hover {
+      border-color: #0047bb;
+      color: #0047bb;
+    }
+
+    .btn-danger {
+      background: rgba(220, 38, 38, 0.1);
+      color: #dc2626;
+      border: 1px solid rgba(220, 38, 38, 0.2);
+    }
+
+    .btn-danger:hover {
+      background: rgba(220, 38, 38, 0.15);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-open {
+      background: rgba(0, 71, 187, 0.1);
+      color: #0047bb;
+    }
+
+    .badge-closed {
+      background: rgba(107, 114, 128, 0.1);
+      color: #4b5563;
+    }
+
+    .badge-expired {
+      background: rgba(234, 88, 12, 0.1);
+      color: #ea580c;
+    }
+
+    .badge-assigned {
+      background: rgba(220, 38, 38, 0.1);
+      color: #dc2626;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f4f6f8;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #c1c7d0;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a0a7b0;
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+
+<body class="min-h-screen flex" x-data="toastManager()" x-init="initToast()">
+
+  <!-- Sidebar -->
+  <aside class="hidden md:flex flex-col w-56 min-h-screen border-r border-border p-4 gap-1 flex-shrink-0"
+    style="background:#002b66">
+    <div class="flex items-center gap-2 mb-6 px-1 pt-2">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-white shadow-sm">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0047bb" stroke-width="2" class="w-5 h-5">
+          <path d="M3 3h18v18H3zM9 9l6 6M15 9l-6 6" />
+        </svg>
+      </div>
+      <span class="font-bold text-sm tracking-wide text-gray-900 tracking-widest uppercase">Global Trading</span>
+    </div>
+
+    <a href="/" class="sidebar-link {% if request.url.path == '/' %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+      </svg>
+      Dashboard
+    </a>
+    <a href="/analyzer/" class="sidebar-link {% if '/analyzer' in request.url.path %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+      </svg>
+      Analyzer
+    </a>
+    <a href="/ai-analysis/" class="sidebar-link {% if '/ai-analysis' in request.url.path %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="m12 14 4-4" />
+        <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+      </svg>
+      AI Analysis
+    </a>
+    <a href="/trades/" class="sidebar-link {% if '/trades' in request.url.path %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14,2 14,8 20,8" />
+        <line x1="8" y1="13" x2="16" y2="13" />
+        <line x1="8" y1="17" x2="16" y2="17" />
+      </svg>
+      Journal
+    </a>
+    {% if user.role == 'admin' %}
+    <a href="/admin/users" class="sidebar-link {% if '/admin' in request.url.path %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+      Users
+    </a>
+    {% endif %}
+
+    <div class="mt-auto border-t border-border pt-4">
+      <a href="/auth/change-password" class="sidebar-link text-xs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+        Change Password
+      </a>
+      <a href="/auth/logout" class="sidebar-link text-xs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16,17 21,12 16,7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
+        Logout
+      </a>
+      <div class="px-1 mt-2 text-xs text-muted">{{ user.username }}</div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="flex-1 flex flex-col min-h-screen">
+    <!-- Mobile header -->
+    <header class="md:hidden flex items-center justify-between p-4 border-b border-border" style="background:#002b66">
+      <span class="font-semibold" style="color:#0047bb">CSP Analyzer</span>
+      <div class="flex gap-3">
+        <a href="/" class="text-muted hover:text-accent text-sm">Home</a>
+        <a href="/analyzer/" class="text-muted hover:text-accent text-sm">Screener</a>
+        <a href="/ai-analysis/" class="text-muted hover:text-accent text-sm">AI</a>
+        <a href="/trades/" class="text-muted hover:text-accent text-sm">Journal</a>
+        <a href="/auth/logout" class="text-muted hover:text-accent text-sm">Logout</a>
+      </div>
+    </header>
+
+    {% if default_password_warning is defined and default_password_warning %}
+    <div class="mx-6 mt-4 p-3 rounded-lg text-sm flex items-center gap-2"
+      style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 flex-shrink-0">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+      You are using the default password. <a href="/auth/change-password" class="underline font-medium ml-1">Change it
+        now →</a>
+    </div>
+    {% endif %}
+
+    <main class="flex-1 p-6">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- Toast notifications -->
+  <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2" x-show="toasts.length > 0">
+    <template x-for="t in toasts" :key="t.id">
+      <div x-show="t.visible" x-transition class="flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm"
+        :class="t.type === 'error' ? 'bg-danger text-gray-900' : 'bg-card border border-accent text-accent'">
+        <span x-text="t.message"></span>
+        <button @click="dismiss(t.id)" class="ml-2 opacity-60 hover:opacity-100">✕</button>
+      </div>
+    </template>
+  </div>
+
+  <!-- Sortable table JS -->
+  <script>
+    function sortTable(tableId) {
+      return {
+        sortCol: -1,
+        sortDir: 1,
+        sort(col) {
+          if (this.sortCol === col) this.sortDir *= -1;
+          else { this.sortCol = col; this.sortDir = 1; }
+          const tbl = document.getElementById(tableId);
+          const tbody = tbl.querySelector('tbody');
+          const rows = Array.from(tbody.querySelectorAll('tr'));
+          rows.sort((a, b) => {
+            const aVal = a.cells[col]?.dataset.val ?? a.cells[col]?.innerText ?? '';
+            const bVal = b.cells[col]?.dataset.val ?? b.cells[col]?.innerText ?? '';
+            const aNum = parseFloat(aVal); const bNum = parseFloat(bVal);
+            if (!isNaN(aNum) && !isNaN(bNum)) return (aNum - bNum) * this.sortDir;
+            return aVal.localeCompare(bVal) * this.sortDir;
+          });
+          rows.forEach(r => tbody.appendChild(r));
+        }
+      };
+    }
+
+    function toastManager() {
+      return {
+        toasts: [],
+        _id: 0,
+        show(message, type = 'success') {
+          const id = ++this._id;
+          this.toasts.push({ id, message, type, visible: true });
+          setTimeout(() => this.dismiss(id), 4000);
+        },
+        dismiss(id) {
+          const t = this.toasts.find(x => x.id === id);
+          if (t) t.visible = false;
+          setTimeout(() => { this.toasts = this.toasts.filter(x => x.id !== id); }, 300);
+        },
+        initToast() {
+          const params = new URLSearchParams(window.location.search);
+          const msg = params.get('toast');
+          if (msg) { this.show(decodeURIComponent(msg)); }
+        }
+      };
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+
+</html>

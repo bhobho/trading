@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Analyzer — CSP Analyzer{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl" x-data="{ loading: false }">
+  <h1 class="text-xl font-semibold mb-6">CSP Screener</h1>
+
+  <!-- Filter form -->
+  <div class="card mb-6">
+    <form method="POST" action="/analyzer/" @submit="loading = true">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+        <div class="col-span-2 md:col-span-1 lg:col-span-1">
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Tickers
+            (comma/space-separated)</label>
+          <input type="text" name="tickers" value="{{ params.get('tickers', '') }}" placeholder="AAPL TSLA SPY"
+            required />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Min Ann. Return %</label>
+          <input type="number" name="min_premium_pct" value="{{ params.get('min_premium_pct', 15) }}" step="0.5"
+            min="0" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Max Delta</label>
+          <input type="number" name="max_delta" value="{{ params.get('max_delta', 0.30) }}" step="0.01" min="0.01"
+            max="0.5" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Min DTE</label>
+          <input type="number" name="min_dte" value="{{ params.get('min_dte', 7) }}" min="1" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Max DTE</label>
+          <input type="number" name="max_dte" value="{{ params.get('max_dte', 45) }}" min="1" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Min Score</label>
+          <input type="number" name="min_score" value="{{ params.get('min_score', 50) }}" min="0" max="100" />
+        </div>
+      </div>
+      <button type="submit" class="btn btn-accent" :disabled="loading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+        <span x-text="loading ? 'Fetching data…' : 'Screen Opportunities'"></span>
+      </button>
+    </form>
+  </div>
+
+  <!-- Loading overlay -->
+  <div x-show="loading" class="flex flex-col items-center justify-center py-20 gap-4">
+    <div class="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
+      style="border-color:#0047bb;border-top-color:transparent"></div>
+    <p class="text-muted text-sm">Fetching options chains… this may take a few seconds</p>
+  </div>
+
+  {% if error %}
+  <div class="mb-4 p-3 rounded-lg text-sm"
+    style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b" x-show="!loading">
+    ⚠ {{ error }}
+  </div>
+  {% endif %}
+
+  {% if results is not none %}
+  <div x-show="!loading">
+    {% if current_prices %}
+    <div class="flex flex-wrap gap-4 mb-4">
+      {% for ticker, price in current_prices.items() %}
+      <div class="card p-3 shadow-sm border border-border bg-white  flex items-center justify-between"
+        style="min-width:140px;">
+        <span class="text-xs uppercase font-medium text-muted tracking-wide">{{ ticker }}</span>
+        <span class="font-bold text-lg" style="color:#0047bb">${{ "%.2f"|format(price) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if results %}
+    <!-- Score legend -->
+    <div class="flex gap-4 mb-3 text-xs text-muted">
+      <span class="badge score-green">Score ≥ 70 — Strong</span>
+      <span class="badge score-yellow">50–69 — Moderate</span>
+      <span class="badge score-red">&lt; 50 — Weak</span>
+    </div>
+
+    <!-- Results table -->
+    <div class="card overflow-x-auto" x-data="sortTable('results-table')">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm text-muted">{{ results|length }} contract{{ 's' if results|length != 1 else '' }}
+          found</span>
+      </div>
+      <table class="w-full text-sm min-w-[900px]" id="results-table">
+        <thead>
+          <tr class="text-xs text-muted border-b border-border">
+            <th class="text-left pb-3 pr-3 font-medium" @click="sort(0)">Ticker ↕</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(1)">Expiry ↕</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(2)">DTE ↕</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(3)">Strike ↕</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(4)">% OTM ↕</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(5)">Bid</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(6)">Ask</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(7)">Mid ↕</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(8)">Ann. Ret% ↕</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(9)">Delta ↕</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(10)">IV% ↕</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(11)">OI ↕</th>
+            <th class="text-right pb-3 px-2 font-medium" @click="sort(12)">B/E ↕</th>
+            <th class="text-right pb-3 pl-2 font-medium" @click="sort(13)">Score ↕</th>
+            <th class="text-right pb-3 pl-2 font-medium">Add</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results %}
+          <tr class="border-b border-border border-opacity-40 hover:bg-white hover:bg-opacity-5 transition-colors">
+            <td class="py-2 pr-3 font-semibold" style="color:#0047bb">{{ r.ticker }}</td>
+            <td class="py-2 px-2 text-right num text-muted" data-val="{{ r.expiration }}">{{ r.expiration }}</td>
+            <td class="py-2 px-2 text-right num" data-val="{{ r.dte }}">{{ r.dte }}d</td>
+            <td class="py-2 px-2 text-right num" data-val="{{ r.strike }}">${{ "%.2f"|format(r.strike) }}</td>
+            <td class="py-2 px-2 text-right num" data-val="{{ r.otm_pct }}">{{ "%.1f"|format(r.otm_pct) }}%</td>
+            <td class="py-2 px-2 text-right num text-muted" data-val="{{ r.bid }}">${{ "%.2f"|format(r.bid) }}</td>
+            <td class="py-2 px-2 text-right num text-muted" data-val="{{ r.ask }}">${{ "%.2f"|format(r.ask) }}</td>
+            <td class="py-2 px-2 text-right num" data-val="{{ r.mid }}">${{ "%.2f"|format(r.mid) }}</td>
+            <td class="py-2 px-2 text-right num font-semibold" data-val="{{ r.annualised_return }}"
+              style="color:#22c55e">{{ "%.1f"|format(r.annualised_return) }}%</td>
+            <td class="py-2 px-2 text-right num" data-val="{{ r.delta }}">{{ "%.3f"|format(r.delta) }}</td>
+            <td class="py-2 px-2 text-right num" data-val="{{ r.iv }}">{{ "%.1f"|format(r.iv) }}%</td>
+            <td class="py-2 px-2 text-right num text-muted" data-val="{{ r.open_interest }}">{{ r.open_interest | int }}
+            </td>
+            <td class="py-2 px-2 text-right num text-muted" data-val="{{ r.break_even }}">${{
+              "%.2f"|format(r.break_even) }}</td>
+            <td class="py-2 pl-2 text-right" data-val="{{ r.csp_score }}">
+              <span class="badge {{ r.score_class }} num font-semibold">{{ r.csp_score }}</span>
+            </td>
+            <td class="py-2 pl-2 text-right">
+              <!-- Pre-fill the add form via a modal or redirect to trades with params -->
+              <form method="POST" action="/trades/add" style="display:inline">
+                <input type="hidden" name="ticker" value="{{ r.ticker }}" />
+                <input type="hidden" name="strike_price" value="{{ r.strike }}" />
+                <input type="hidden" name="expiration_date" value="{{ r.expiration }}" />
+                <input type="hidden" name="num_contracts" value="1" />
+                <input type="hidden" name="premium_received" value="{{ r.mid }}" />
+                <input type="hidden" name="open_date" value="{{ r.expiration[:7] }}-01" />
+                <button type="submit" class="btn btn-outline text-xs py-1 px-2">+</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card text-center py-12 text-muted">
+      <p class="text-sm">No contracts matched your filters. Try relaxing the delta or DTE range.</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

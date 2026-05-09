@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  csp_analyzer:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/csp_analyzer.db
+      - SECRET_KEY=${SECRET_KEY:-changeme-use-env-var-in-prod}
+      - DEBUG=false
+    volumes:
+      # Persist SQLite DB across container restarts
+      - csp_data:/app/data
+      # Mount source for live-reload during development
+      # Comment out the line below for production
+      - .:/app
+    restart: unless-stopped
+
+volumes:
+  csp_data:

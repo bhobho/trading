@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}AI Analysis — CSP Analyzer{% endblock %}
+{% block head %}
+<!-- Add marked.js for parsing markdown client-side -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+    /* Claude-like markdown formatting */
+    .prose h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        color: #f3f4f6;
+    }
+
+    .prose h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-top: 1.25rem;
+        margin-bottom: 0.5rem;
+        color: #e5e7eb;
+    }
+
+    .prose p {
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
+
+    .prose ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .prose li {
+        margin-bottom: 0.5rem;
+    }
+
+    .prose strong {
+        color: #0047bb;
+        font-weight: 600;
+    }
+
+    .prose table {
+        w-full border-collapse my-4;
+    }
+
+    .prose th {
+        border-bottom: 2px solid #374151;
+        padding: 0.5rem;
+        text-align: left;
+        color: #f3f4f6;
+    }
+
+    .prose td {
+        border-bottom: 1px solid #374151;
+        padding: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto" x-data="{ loading: false }">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="p-2 rounded-lg bg-blue-100 text-emerald-700">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 14 4-4" />
+                <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+            </svg>
+        </div>
+        <h1 class="text-xl font-semibold">DeepSeek Technical Analysis</h1>
+    </div>
+
+    <!-- Filter form -->
+    <div class="card mb-6 shadow-sm border border-border">
+        <form method="POST" action="/ai-analysis/" @submit="loading = true" class="flex gap-4 items-end">
+            <div class="flex-1">
+                <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Target Ticker</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-muted">$</span>
+                    <input type="text" name="ticker" value="{{ ticker }}" placeholder="AAPL" required
+                        class="pl-8 w-full" autofocus />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-accent" :disabled="loading">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                    <path d="M12 2v20" />
+                    <path d="m17 5-5-3-5 3" />
+                    <path d="m19 12-7-7-7 7" />
+                </svg>
+                <span x-text="loading ? 'Analyzing…' : 'Generate Analysis'"></span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Loading overlay -->
+    <div x-show="loading"
+        class="card flex flex-col items-center justify-center py-20 gap-4 mt-6 border border-border bg-white">
+        <div class="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
+            style="border-color:#0047bb;border-top-color:transparent"></div>
+        <p class="text-muted text-sm tracking-wide animate-pulse">Consulting DeepSeek AI model… fetching trends and
+            volume.</p>
+    </div>
+
+    {% if error %}
+    <div class="mb-4 p-4 rounded-lg text-sm bg-red-500/10 border border-red-500/30 text-red-500" x-show="!loading">
+        ⚠ {{ error }}
+    </div>
+    {% endif %}
+
+    {% if analysis %}
+    <div x-show="!loading" class="card mt-6 border border-border shadow-lg p-6 lg:p-8 bg-white backdrop-blur">
+        <div class="flex items-center gap-2 mb-6 pb-4 border-b border-gray-800">
+            <div
+                class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-700">
+                AI</div>
+            <span class="font-medium text-gray-900">DeepSeek Forecast for <span class="text-gray-900">{{ ticker
+                    }}</span></span>
+        </div>
+
+        <!-- Rendered Markdown Container -->
+        <div id="ai-content" class="prose max-w-none text-gray-900">
+            <!-- We store the raw markdown safely in a hidden div, then render it with JS -->
+            <pre id="raw-markdown" class="hidden">{{ analysis }}</pre>
+        </div>
+    </div>
+
+    <script>
+        // Run marked.js over the raw markdown on load
+        document.addEventListener("DOMContentLoaded", () => {
+            const rawEl = document.getElementById('raw-markdown');
+            const contentEl = document.getElementById('ai-content');
+            if (rawEl && contentEl) {
+                contentEl.innerHTML = marked.parse(rawEl.textContent);
+            }
+        });
+    </script>
+    {% endif %}
+</div>
+{% endblock %}

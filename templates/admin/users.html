@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}User Management — CSP Analyzer{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl" x-data="{ showCreate: false, editUser: null, resetUser: null }">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-xl font-semibold">User Management</h1>
+    <button class="btn btn-accent" @click="showCreate = !showCreate">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New User
+    </button>
+  </div>
+
+  {% if error %}
+  <div class="mb-4 p-3 rounded-lg text-sm" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#ef4444">{{ error }}</div>
+  {% endif %}
+
+  <!-- Create user form -->
+  <div x-show="showCreate" x-collapse class="card mb-6" style="display:none">
+    <h2 class="text-sm font-semibold mb-4">Create New User</h2>
+    <form method="POST" action="/admin/users/create">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Username</label>
+          <input type="text" name="username" required />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Email</label>
+          <input type="email" name="email" required />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Password</label>
+          <input type="password" name="password" required minlength="8" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Role</label>
+          <select name="role">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button type="submit" class="btn btn-accent">Create User</button>
+        <button type="button" class="btn btn-outline" @click="showCreate = false">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Users table -->
+  <div class="card overflow-x-auto">
+    <table class="w-full text-sm min-w-[700px]">
+      <thead>
+        <tr class="text-xs text-muted border-b border-border">
+          <th class="text-left pb-3 font-medium">Username</th>
+          <th class="text-left pb-3 font-medium">Email</th>
+          <th class="text-center pb-3 font-medium">Role</th>
+          <th class="text-center pb-3 font-medium">Active</th>
+          <th class="text-right pb-3 font-medium">Last Login</th>
+          <th class="text-right pb-3 font-medium">Created</th>
+          <th class="text-right pb-3 font-medium">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr class="border-b border-border border-opacity-40 hover:bg-white hover:bg-opacity-5 transition-colors">
+          <td class="py-2 font-semibold {% if u.id == user.id %}text-accent{% endif %}">
+            {{ u.username }}
+            {% if u.id == user.id %}<span class="text-xs text-muted ml-1">(you)</span>{% endif %}
+          </td>
+          <td class="py-2 text-muted">{{ u.email }}</td>
+          <td class="py-2 text-center">
+            <span class="badge {% if u.role == 'admin' %}score-green{% else %}badge-closed{% endif %}">{{ u.role }}</span>
+          </td>
+          <td class="py-2 text-center">
+            {% if u.is_active %}
+            <span style="color:#22c55e">●</span>
+            {% else %}
+            <span style="color:#6b7280">●</span>
+            {% endif %}
+          </td>
+          <td class="py-2 text-right num text-muted text-xs">{{ u.last_login.strftime('%Y-%m-%d %H:%M') if u.last_login else '—' }}</td>
+          <td class="py-2 text-right num text-muted text-xs">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+          <td class="py-2 text-right">
+            <div class="flex gap-1 justify-end">
+              <!-- Edit role/active -->
+              <button class="btn btn-outline text-xs py-1 px-2"
+                      @click="editUser = { id: {{ u.id }}, role: '{{ u.role }}', active: {{ 'true' if u.is_active else 'false' }} }">
+                Edit
+              </button>
+              <!-- Reset password -->
+              <button class="btn btn-outline text-xs py-1 px-2"
+                      @click="resetUser = { id: {{ u.id }}, username: '{{ u.username }}' }">
+                PW
+              </button>
+              {% if u.id != user.id %}
+              <form method="POST" action="/admin/users/{{ u.id }}/delete" onsubmit="return confirm('Deactivate {{ u.username }}?')">
+                <button type="submit" class="btn btn-danger text-xs py-1 px-2">Del</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Edit user modal -->
+  <div x-show="editUser !== null" class="fixed inset-0 flex items-center justify-center z-50" style="background:rgba(0,0,0,0.7)" @click.self="editUser = null">
+    <div class="card w-full max-w-sm">
+      <h3 class="font-semibold mb-4">Edit User</h3>
+      <template x-if="editUser">
+        <form :action="'/admin/users/' + editUser.id + '/edit'" method="POST">
+          <div class="mb-4">
+            <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Role</label>
+            <select name="role" x-model="editUser.role">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="mb-6 flex items-center gap-3">
+            <input type="checkbox" name="is_active" id="is_active_chk" :checked="editUser.active" value="on" class="w-4 h-4" style="width:1rem;border-radius:0.25rem" />
+            <label for="is_active_chk" class="text-sm">Active</label>
+          </div>
+          <div class="flex gap-2">
+            <button type="submit" class="btn btn-accent">Save</button>
+            <button type="button" class="btn btn-outline" @click="editUser = null">Cancel</button>
+          </div>
+        </form>
+      </template>
+    </div>
+  </div>
+
+  <!-- Reset password modal -->
+  <div x-show="resetUser !== null" class="fixed inset-0 flex items-center justify-center z-50" style="background:rgba(0,0,0,0.7)" @click.self="resetUser = null">
+    <div class="card w-full max-w-sm">
+      <h3 class="font-semibold mb-1">Reset Password</h3>
+      <template x-if="resetUser">
+        <div>
+          <p class="text-sm text-muted mb-4">Set new password for <span class="text-white" x-text="resetUser.username"></span></p>
+          <form :action="'/admin/users/' + resetUser.id + '/reset-password'" method="POST">
+            <div class="mb-4">
+              <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">New Password</label>
+              <input type="password" name="new_password" required minlength="8" />
+            </div>
+            <div class="flex gap-2">
+              <button type="submit" class="btn btn-accent">Reset</button>
+              <button type="button" class="btn btn-outline" @click="resetUser = null">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
+{% endblock %}

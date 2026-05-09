@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — CSP Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #f4f6f8; color: #e5e7eb; font-family: 'DM Sans', sans-serif; }
+    input { background: #002b66; border: 1px solid #2a2d3a; color: #e5e7eb; border-radius: 0.5rem; padding: 0.625rem 0.875rem; width: 100%; font-size: 0.9rem; transition: border-color 0.15s; }
+    input:focus { outline: none; border-color: #0047bb; box-shadow: 0 0 0 2px rgba(0,212,170,0.15); }
+    label { font-size: 0.8rem; color: #9ca3af; font-weight: 500; letter-spacing: 0.03em; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-sm">
+    <!-- Logo -->
+    <div class="flex flex-col items-center mb-8">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style="background:rgba(0,212,170,0.15)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0047bb" stroke-width="2" class="w-6 h-6"><path d="M3 3h18v18H3zM9 9l6 6M15 9l-6 6"/></svg>
+      </div>
+      <h1 class="text-xl font-semibold">CSP Analyzer</h1>
+      <p class="text-sm mt-1" style="color:#6b7280">Sign in to your account</p>
+    </div>
+
+    <!-- Card -->
+    <div style="background:#ffffff;border:1px solid #2a2d3a;border-radius:0.875rem;padding:2rem">
+      {% if error %}
+      <div class="mb-4 p-3 rounded-lg text-sm" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#ef4444">
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="/auth/login">
+        <div class="mb-4">
+          <label for="username" class="block mb-1.5">USERNAME</label>
+          <input type="text" id="username" name="username" required autofocus placeholder="admin" />
+        </div>
+        <div class="mb-6">
+          <label for="password" class="block mb-1.5">PASSWORD</label>
+          <input type="password" id="password" name="password" required placeholder="••••••••" />
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-lg font-semibold text-sm cursor-pointer transition-all" style="background:#0047bb;color:#f4f6f8" onmouseover="this.style.background='#003388'" onmouseout="this.style.background='#0047bb'">
+          Sign In
+        </button>
+      </form>
+    </div>
+    <p class="text-center text-xs mt-4" style="color:#4b5563">Default credentials: <span style="color:#0047bb;font-family:'DM Mono',monospace">admin / admin123</span></p>
+  </div>
+</body>
+</html>

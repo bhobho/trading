@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Edit Trade — CSP Analyzer{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/trades/" class="text-muted hover:text-accent">← Journal</a>
+    <span class="text-muted">/</span>
+    <h1 class="text-xl font-semibold">Edit Trade — <span style="color:#0047bb">{{ trade.ticker }}</span></h1>
+  </div>
+
+  <div class="card mb-4 grid grid-cols-3 gap-4 text-sm">
+    <div><div class="text-xs text-muted mb-1">Strike</div><div class="num">${{ "%.2f"|format(trade.strike_price) }}</div></div>
+    <div><div class="text-xs text-muted mb-1">Expiry</div><div class="num">{{ trade.expiration_date }}</div></div>
+    <div><div class="text-xs text-muted mb-1">Premium</div><div class="num">${{ "%.2f"|format(trade.premium_received) }}/sh</div></div>
+    <div><div class="text-xs text-muted mb-1">Contracts</div><div class="num">{{ trade.num_contracts }}</div></div>
+    <div><div class="text-xs text-muted mb-1">Open Date</div><div class="num">{{ trade.open_date }}</div></div>
+    <div><div class="text-xs text-muted mb-1">Total Credit</div><div class="num">${{ "%.2f"|format(trade.total_premium) }}</div></div>
+  </div>
+
+  <div class="card">
+    <form method="POST" action="/trades/{{ trade.id }}/edit">
+      <div class="mb-4">
+        <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Status</label>
+        <select name="status">
+          <option value="open" {% if trade.status == 'open' %}selected{% endif %}>Open</option>
+          <option value="closed" {% if trade.status == 'closed' %}selected{% endif %}>Closed Early</option>
+          <option value="expired" {% if trade.status == 'expired' %}selected{% endif %}>Expired Worthless</option>
+          <option value="assigned" {% if trade.status == 'assigned' %}selected{% endif %}>Assigned</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Close Premium/Share (if closed early)</label>
+        <input type="number" name="close_premium" step="0.01" value="{{ trade.close_premium or '' }}" placeholder="0.00" />
+        <p class="text-xs text-muted mt-1">Leave blank for expired/assigned trades.</p>
+      </div>
+      <div class="mb-4">
+        <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Close Date</label>
+        <input type="date" name="close_date" value="{{ trade.close_date.isoformat() if trade.close_date else '' }}" />
+      </div>
+      <div class="mb-6">
+        <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Notes</label>
+        <textarea name="notes" rows="3" placeholder="Optional notes…">{{ trade.notes or '' }}</textarea>
+      </div>
+      <div class="flex gap-2">
+        <button type="submit" class="btn btn-accent">Save Changes</button>
+        <a href="/trades/" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
