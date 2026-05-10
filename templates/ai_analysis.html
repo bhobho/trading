@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}AI Analysis — CSP Analyzer{% endblock %}
+{% block head %}
+<!-- Add marked.js for parsing markdown client-side -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl" x-data="{ loading: false, ticker: '{{ ticker }}' }">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="p-2 rounded-lg bg-blue-100 text-emerald-700">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 14 4-4" />
+                <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+            </svg>
+        </div>
+        <h1 class="text-xl font-semibold">AI Research: With focus on 3-5 weeks DTE for CSP suitability</h1>
+    </div>
+
+    <!-- Technical Analysis Mode -->
+    <div class="card mb-6 shadow-sm border border-border">
+        <form method="POST" action="/ai-analysis/" @submit="loading = true" class="flex gap-4 items-end max-w-md">
+            <div class="flex-1">
+                <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Target Ticker</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-muted">$</span>
+                    <input type="text" name="ticker" value="{{ ticker }}" placeholder="AAPL" required
+                        class="pl-8 w-full" />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-accent" :disabled="loading">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                    <path d="M12 2v20" />
+                    <path d="m17 5-5-3-5 3" />
+                    <path d="m19 12-7-7-7 7" />
+                </svg>
+                <span x-text="loading ? 'Analyzing…' : 'Generate Analysis'"></span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Loading overlay -->
+    <div x-show="loading"
+        class="card flex flex-col items-center justify-center py-20 gap-4 mt-6 border border-border bg-white shadow-sm">
+        <div class="relative w-16 h-16">
+            <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+            <div class="absolute inset-0 rounded-full border-4 border-t-transparent animate-spin"
+                style="border-color:#0047bb;border-top-color:transparent"></div>
+        </div>
+        <div class="text-center">
+            <p class="text-gray-900 font-semibold tracking-wide">Claude is Analyzing</p>
+            <p class="text-muted text-xs mt-1 animate-pulse">Processing live market data & technical indicators...</p>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="mb-4 p-4 rounded-lg text-sm bg-red-500/10 border border-red-500/30 text-red-500" x-show="!loading">
+        ⚠ {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Analysis Results -->
+    {% if analysis %}
+    <div x-show="!loading" class="card mt-6 border border-border shadow-lg p-6 lg:p-8 bg-white backdrop-blur">
+        <div class="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
+            <div
+                class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700">
+                AI</div>
+            <span class="font-medium text-gray-900">Analysis Result for <span class="text-blue-700 font-bold">{{ ticker }}</span></span>
+        </div>
+
+        <div id="ai-content" class="prose max-w-none text-gray-900">
+            <pre id="raw-markdown" class="hidden">{{ analysis }}</pre>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const rawEl = document.getElementById('raw-markdown');
+            const contentEl = document.getElementById('ai-content');
+            if (rawEl && contentEl) {
+                contentEl.innerHTML = marked.parse(rawEl.textContent);
+            }
+        });
+    </script>
+
+    <!-- Disclaimer -->
+    <div class="mt-12 pt-6 border-t border-gray-100 text-center">
+        <p class="text-[10px] text-muted uppercase tracking-widest font-medium opacity-60">
+            Perform your own research. This is not a Financial advise
+        </p>
+    </div>
+</div>
+{% endblock %}

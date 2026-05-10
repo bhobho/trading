@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Profile — CSP Analyzer{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white" style="background:#0047bb">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    </div>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">My Profile</h1>
+      <p class="text-sm text-gray-500">Manage your account details and preferences.</p>
+    </div>
+  </div>
+
+  <div class="card space-y-6">
+    <div class="flex items-center justify-between border-b border-border pb-4">
+      <div>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Username</p>
+        <p class="text-lg font-medium text-gray-900 mt-1">{{ user.username }}</p>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between border-b border-border pb-4">
+      <div>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email Address</p>
+        <p class="text-lg font-medium text-gray-900 mt-1">{{ user.email }}</p>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between border-b border-border pb-4">
+      <div>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Account Role</p>
+        <p class="mt-1">
+          {% if user.role == 'admin' %}
+          <span class="badge badge-assigned uppercase tracking-wide">Administrator</span>
+          {% else %}
+          <span class="badge badge-open uppercase tracking-wide">User</span>
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between pb-2">
+      <div>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Member Since</p>
+        <p class="text-sm font-medium text-gray-900 mt-1">{{ user.created_at.strftime('%Y-%m-%d') }}</p>
+      </div>
+    </div>
+
+    <div class="pt-6 mt-6 border-t border-border flex justify-end">
+      <a href="/auth/change-password" class="btn btn-outline text-sm">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 mr-1">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+        Change Password
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Journal — CSP Analyzer{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl" x-data="{ showAdd: false }">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-xl font-semibold">Trade Journal</h1>
+    <div class="flex gap-2">
+      <a href="/trades/export" class="btn btn-outline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </a>
+      <form method="POST" action="/trades/import" enctype="multipart/form-data" class="flex items-center">
+        <label class="btn btn-outline cursor-pointer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Import CSV
+          <input type="file" name="file" class="hidden" onchange="this.form.submit()" accept=".csv">
+        </label>
+      </form>
+      <button class="btn btn-accent" @click="showAdd = !showAdd">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Trade
+      </button>
+    </div>
+  </div>
+
+  <!-- Add trade form (collapsible) -->
+  <div x-show="showAdd" x-collapse class="card mb-6" style="display:none">
+    <h2 class="text-sm font-semibold mb-4">New Trade</h2>
+    <form method="POST" action="/trades/add">
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-4">
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Ticker</label>
+          <input type="text" name="ticker" placeholder="AAPL" required />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Strike</label>
+          <input type="number" name="strike_price" step="0.50" placeholder="150.00" required />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Expiration</label>
+          <input type="date" name="expiration_date" required />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Contracts</label>
+          <input type="number" name="num_contracts" value="1" min="1" required />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Premium/Share</label>
+          <input type="number" name="premium_received" step="0.01" placeholder="1.50" required />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Open Date</label>
+          <input type="date" name="open_date" required />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Collateral</label>
+          <input type="number" name="collateral" step="100" placeholder="Optional" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Delta</label>
+          <input type="number" name="delta" step="0.01" placeholder="0.30" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">IV %</label>
+          <input type="number" name="iv" step="0.1" placeholder="40.5" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Notes</label>
+          <input type="text" name="notes" placeholder="Optional" />
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button type="submit" class="btn btn-accent">Save Trade</button>
+        <button type="button" class="btn btn-outline" @click="showAdd = false">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Summary stats -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="card">
+      <div class="text-xs text-muted uppercase tracking-wide mb-1">Total Trades</div>
+      <div class="text-xl font-semibold num">{{ summary.total_trades }}</div>
+    </div>
+    <div class="card">
+      <div class="text-xs text-muted uppercase tracking-wide mb-1">Total Premium</div>
+      <div class="text-xl font-semibold num">${{ "%.2f"|format(summary.total_premium) }}</div>
+    </div>
+    <div class="card">
+      <div class="text-xs text-muted uppercase tracking-wide mb-1">Win Rate</div>
+      <div class="text-xl font-semibold num">{{ summary.win_rate }}%</div>
+    </div>
+    <div class="card">
+      <div class="text-xs text-muted uppercase tracking-wide mb-1">Avg Ann. Return</div>
+      <div class="text-xl font-semibold num">{{ summary.avg_ann_return }}%</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex flex-wrap gap-3 mb-4">
+    <form method="GET" action="/trades/" class="flex flex-wrap gap-2 items-end">
+      <div>
+        <label class="block mb-1 text-xs text-muted">Status</label>
+        <select name="status" class="py-1.5 text-sm" style="width:auto;padding-right:2rem" onchange="this.form.submit()">
+          <option value="all" {% if filter_status == 'all' %}selected{% endif %}>All</option>
+          <option value="open" {% if filter_status == 'open' %}selected{% endif %}>Open</option>
+          <option value="closed" {% if filter_status == 'closed' %}selected{% endif %}>Closed</option>
+          <option value="expired" {% if filter_status == 'expired' %}selected{% endif %}>Expired</option>
+          <option value="assigned" {% if filter_status == 'assigned' %}selected{% endif %}>Assigned</option>
+        </select>
+      </div>
+      {% if all_tickers %}
+      <div>
+        <label class="block mb-1 text-xs text-muted">Ticker</label>
+        <select name="ticker" class="py-1.5 text-sm" style="width:auto;padding-right:2rem" onchange="this.form.submit()">
+          <option value="">All Tickers</option>
+          {% for t in all_tickers %}
+          <option value="{{ t }}" {% if filter_ticker == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Trades table -->
+  <div class="card overflow-x-auto" x-data="sortTable('trades-table')">
+    {% if trades %}
+    <table class="w-full text-sm min-w-[1000px]" id="trades-table">
+      <thead>
+        <tr class="text-xs text-muted border-b border-border">
+          <th class="text-left pb-3 pr-3 font-medium" @click="sort(0)">Ticker ↕</th>
+          <th class="text-right pb-3 px-2 font-medium" @click="sort(1)">Strike ↕</th>
+          <th class="text-right pb-3 px-2 font-medium" @click="sort(2)">Expiry ↕</th>
+          <th class="text-right pb-3 px-2 font-medium" @click="sort(3)">DTE ↕</th>
+          <th class="text-right pb-3 px-2 font-medium" @click="sort(4)"># Contracts</th>
+          <th class="text-right pb-3 px-2 font-medium" @click="sort(5)">Premium/sh ↕</th>
+          <th class="text-right pb-3 px-2 font-medium" @click="sort(6)">Total Credit ↕</th>
+          <th class="text-right pb-3 px-2 font-medium" @click="sort(7)">P&L ↕</th>
+          <th class="text-right pb-3 px-2 font-medium" @click="sort(8)">Ret% ↕</th>
+          <th class="text-right pb-3 px-2 font-medium">Delta/IV</th>
+          <th class="text-right pb-3 px-2 font-medium">Status</th>
+          <th class="text-right pb-3 pl-2 font-medium">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in trades %}
+        <tr class="border-b border-border border-opacity-40 hover:bg-white hover:bg-opacity-5 transition-colors">
+          <td class="py-2 pr-3 font-semibold" style="color:#0047bb" data-val="{{ t.ticker }}">{{ t.ticker }}</td>
+          <td class="py-2 px-2 text-right num" data-val="{{ t.strike_price }}">${{ "%.2f"|format(t.strike_price) }}</td>
+          <td class="py-2 px-2 text-right num text-muted" data-val="{{ t.expiration_date }}">{{ t.expiration_date }}</td>
+          <td class="py-2 px-2 text-right num {% if t.dte >= 0 and t.dte <= 3 %}text-danger{% elif t.dte >= 0 and t.dte <= 7 %}text-warning{% endif %}" data-val="{{ t.dte }}">
+            {% if t.dte >= 0 %}{{ t.dte }}d{% else %}—{% endif %}
+          </td>
+          <td class="py-2 px-2 text-right num" data-val="{{ t.num_contracts }}">{{ t.num_contracts }}</td>
+          <td class="py-2 px-2 text-right num" data-val="{{ t.premium_received }}">${{ "%.2f"|format(t.premium_received) }}</td>
+          <td class="py-2 px-2 text-right num font-semibold" data-val="{{ t.total_premium }}">${{ "%.2f"|format(t.total_premium) }}</td>
+          <td class="py-2 px-2 text-right num" data-val="{{ t.unrealized_pnl or t.realized_pnl or 0 }}">
+            {% if t.status == 'open' %}
+              {% if t.unrealized_pnl is not none %}
+                <span class="{% if t.unrealized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">${{ "%.2f"|format(t.unrealized_pnl) }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            {% else %}
+              {% if t.realized_pnl is not none %}
+                <span class="{% if t.realized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">${{ "%.2f"|format(t.realized_pnl) }}</span>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td class="py-2 px-2 text-right num" data-val="{{ t.annualized_return }}">{{ "%.1f"|format(t.annualized_return) }}%</td>
+          <td class="py-2 px-2 text-right text-xs text-muted">
+            {% if t.delta %}<span class="text-gray-900 font-medium">δ{{ t.delta }}</span><br>{% endif %}
+            {% if t.iv %}<span>IV {{ t.iv }}%</span>{% endif %}
+            {% if not t.delta and not t.iv %}—{% endif %}
+          </td>
+          <td class="py-2 px-2 text-right"><span class="badge badge-{{ t.status }}">{{ t.status }}</span></td>
+          <td class="py-2 pl-2 text-right">
+            <div class="flex gap-1 justify-end">
+              <a href="/trades/{{ t.id }}/edit" class="btn btn-outline text-xs py-1 px-2">Edit</a>
+              <form method="POST" action="/trades/{{ t.id }}/delete" onsubmit="return confirm('Delete this trade?')">
+                <button type="submit" class="btn btn-danger text-xs py-1 px-2">Del</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-12 text-muted">
+      <p class="text-sm">No trades found. <a href="/analyzer/" style="color:#0047bb">Find opportunities in the Screener →</a></p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

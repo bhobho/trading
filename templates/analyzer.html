@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}CSP Screener — CSP Analyzer{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl" x-data="{ loading: false }">
+  <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+    <h1 class="text-xl font-semibold">CSP Screener</h1>
+    <div class="flex gap-4 p-4 rounded-lg bg-blue-50 border border-blue-100 max-w-2xl">
+      <div class="text-blue-700 mt-0.5">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+      </div>
+      <div>
+        <h4 class="text-xs font-bold text-blue-900 uppercase tracking-wider mb-1">Assignment Risk Guidelines</h4>
+        <p class="text-xs text-blue-800 leading-relaxed">
+          For lower assignment risk: Prefer **Delta < 0.20** and **IV > 30%**. 
+          Avoid selling puts just before earnings to minimize volatility spikes.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter form -->
+  <div class="card mb-6">
+    <form method="POST" action="/analyzer/" @submit="loading = true">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+        <div class="col-span-2 md:col-span-1 lg:col-span-1">
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Tickers</label>
+          <input type="text" name="tickers" value="{{ params.get('tickers', '') }}" placeholder="AAPL TSLA SPY"
+            required />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Min Ann. Return %</label>
+          <input type="number" name="min_premium_pct" value="{{ params.get('min_premium_pct', 15) }}" step="0.5"
+            min="0" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Max Delta</label>
+          <input type="number" name="max_delta" value="{{ params.get('max_delta', 0.30) }}" step="0.01" min="0.01"
+            max="0.5" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Min DTE</label>
+          <input type="number" name="min_dte" value="{{ params.get('min_dte', 7) }}" min="1" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Max DTE</label>
+          <input type="number" name="max_dte" value="{{ params.get('max_dte', 45) }}" min="1" />
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-muted uppercase tracking-wide">Min Score</label>
+          <input type="number" name="min_score" value="{{ params.get('min_score', 50) }}" min="0" max="100" />
+        </div>
+      </div>
+      <button type="submit" class="btn btn-accent" :disabled="loading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+        <span x-text="loading ? 'Fetching data…' : 'Screen Opportunities'"></span>
+      </button>
+    </form>
+  </div>
+
+  <!-- Loading overlay -->
+  <div x-show="loading"
+    class="card flex flex-col items-center justify-center py-20 gap-4 mt-6 border border-border bg-white shadow-sm">
+    <div class="relative w-16 h-16">
+      <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+      <div class="absolute inset-0 rounded-full border-4 border-t-transparent animate-spin"
+        style="border-color:#0047bb;border-top-color:transparent"></div>
+    </div>
+    <div class="text-center">
+      <p class="text-gray-900 font-semibold tracking-wide">Scanning Option Chains</p>
+      <p class="text-muted text-xs mt-1 animate-pulse">Filtering opportunities based on your criteria...</p>
+    </div>
+  </div>
+
+  {% if error %}
+  <div class="mb-4 p-3 rounded-lg text-sm"
+    style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b" x-show="!loading">
+    ⚠ {{ error }}
+  </div>
+  {% endif %}
+
+  {% if results is not none %}
+  <div x-show="!loading">
+    {% if current_prices %}
+    <div class="flex flex-wrap gap-4 mb-4">
+      {% for ticker, price in current_prices.items() %}
+      <div class="card p-3 shadow-sm border border-border bg-white  flex items-center justify-between"
+        style="min-width:140px;">
+        <span class="text-xs uppercase font-medium text-muted tracking-wide">{{ ticker }}</span>
+        <span class="font-bold text-lg" style="color:#0047bb">${{ "%.2f"|format(price) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if results %}
+    <!-- Score legend -->
+    <div class="flex gap-4 mb-3 text-[10px] uppercase tracking-wider font-bold text-muted">
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Strong (≥ 70)</span>
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Moderate (50-69)</span>
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Weak (&lt; 50)</span>
+    </div>
+
+    <!-- Results table -->
+    <div class="card overflow-x-auto" x-data="sortTable('results-table')">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm text-muted">{{ results|length }} contract{{ 's' if results|length != 1 else '' }}
+          found</span>
+      </div>
+      <table class="w-full text-sm min-w-[900px]" id="results-table">
+        <thead>
+          <tr class="text-xs text-muted border-b border-border bg-gray-50">
+            <th class="text-left py-3 px-4 font-bold" @click="sort(0)">Ticker ↕</th>
+            <th class="text-right py-3 px-2 font-bold" @click="sort(1)">Expiry ↕</th>
+            <th class="text-right py-3 px-2 font-bold" @click="sort(2)">DTE ↕</th>
+            <th class="text-right py-3 px-2 font-bold" @click="sort(3)">Strike ↕</th>
+            <th class="text-right py-3 px-2 font-bold" @click="sort(4)">OTM % ↕</th>
+            <th class="text-right py-3 px-2 font-bold" @click="sort(7)">Mid ↕</th>
+            <th class="text-right py-3 px-2 font-bold" @click="sort(8)">Ann. Ret% ↕</th>
+            <th class="text-right py-3 px-2 font-bold" @click="sort(9)">Delta ↕</th>
+            <th class="text-right py-3 px-2 font-bold" @click="sort(10)">IV% ↕</th>
+            <th class="text-right py-3 px-2 font-bold" @click="sort(13)">Score ↕</th>
+            <th class="text-right py-3 px-4 font-bold">Add</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results %}
+          <tr class="border-b border-border last:border-0 hover:bg-gray-50 transition-colors">
+            <td class="py-4 px-4 font-bold text-gray-900">{{ r.ticker }}</td>
+            <td class="py-4 px-2 text-right text-muted" data-val="{{ r.expiration }}">{{ r.expiration }}</td>
+            <td class="py-4 px-2 text-right font-medium" data-val="{{ r.dte }}">{{ r.dte }}d</td>
+            <td class="py-4 px-2 text-right font-bold text-gray-900" data-val="{{ r.strike }}">${{ "%.2f"|format(r.strike) }}</td>
+            <td class="py-4 px-2 text-right text-muted" data-val="{{ r.otm_pct }}">{{ "%.1f"|format(r.otm_pct) }}%</td>
+            <td class="py-4 px-2 text-right font-medium" data-val="{{ r.mid }}">${{ "%.2f"|format(r.mid) }}</td>
+            <td class="py-4 px-2 text-right num font-bold text-emerald-600" data-val="{{ r.annualised_return }}">{{ "%.1f"|format(r.annualised_return) }}%</td>
+            <td class="py-4 px-2 text-right text-gray-600" data-val="{{ r.delta }}">δ{{ "%.2f"|format(r.delta) }}</td>
+            <td class="py-4 px-2 text-right text-muted" data-val="{{ r.iv }}">{{ "%.1f"|format(r.iv) }}%</td>
+            <td class="py-4 px-2 text-right" data-val="{{ r.csp_score }}">
+              <span class="badge {{ r.score_class }} px-3 py-1 text-xs font-bold">{{ r.csp_score }}</span>
+            </td>
+            <td class="py-4 px-4 text-right">
+              <form method="POST" action="/trades/add" style="display:inline">
+                <input type="hidden" name="ticker" value="{{ r.ticker }}" />
+                <input type="hidden" name="strike_price" value="{{ r.strike }}" />
+                <input type="hidden" name="expiration_date" value="{{ r.expiration }}" />
+                <input type="hidden" name="num_contracts" value="1" />
+                <input type="hidden" name="premium_received" value="{{ r.mid }}" />
+                <input type="hidden" name="open_date" value="{{ r.expiration[:7] }}-01" />
+                <button type="submit" class="btn btn-accent text-xs py-1 px-3 shadow-sm hover:scale-105 transition-transform">+</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card text-center py-12 text-muted">
+      <p class="text-sm">No contracts matched your filters. Try relaxing the delta or DTE range.</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
